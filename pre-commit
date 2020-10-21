@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+# To enable this hook, rename this file to "pre-commit".
+
+echo "Starting pre-commit hook."
+currentBranch=$(git branch --show-current)
+toCommitFiles=$(git diff --name-only $currentBranch) #| sed -e ':a;N;$!ba;s/\n/ /g')
+problemsFound=0;
+echo "Initializing output results file."
+sleep 1
+> PMD_RESULTS.txt
+echo "Starting PMD analyzer."
+
+counter=0
+for line in $toCommitFiles;
+do
+  echo $line
+  $HOME/pmd-bin-6.28.0/bin/run.sh pmd -d $line -l java -R .git/hooks/rulesets.xml >> PMD_RESULTS.txt
+  counter=$(($counter+1))
+done
+
+echo "Analyzer finished.\nAnalyzed $counter files."
+sleep 0.5
+problemsFound=$(wc -l < PMD_RESULTS.txt)
+echo "Problems found : $problemsFound"
+if [ $problemsFound -gt 0 ];
+  then
+  echo "Consider check PMD_RESULTS file for more information at: $(readlink -f PMD_RESULTS.txt)"
+  exit 1
+fi
